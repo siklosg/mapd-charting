@@ -124,7 +124,7 @@ export default function rasterLayerPolyMixin (_layer) {
         shapeColGroup: "mapd",
         sql: parser.writeSQL({
           type: "root",
-          source: state.data[0].table, //.map(source => source.table).join(", "),
+          source: state.data[0].table, // .map(source => source.table).join(", "),
           transform: getTransforms({filter, globalFilter})
         }),
         dbTableName: state.data[1].table,
@@ -136,7 +136,7 @@ export default function rasterLayerPolyMixin (_layer) {
           type: "quantize",
           domain: state.encoding.color.domain,
           range: colorRange,
-          nullValue: "#CACACA",
+          nullValue: "#CACACA"
         }
       ],
       mark: {
