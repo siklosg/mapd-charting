@@ -80,17 +80,15 @@ describe("rasterLayerPolyMixin", () => {
         data: {
           name: "polys",
           format: "polys",
-          shapeColGroup: "mapd",
-          dbTableName: "zipcodes",
-          polysKey: "ZCTA5CE10",
-          sql: "SELECT contributor_zipcode as key0, AVG(contributions_donotmodify.amount) as color FROM contributions_donotmodify WHERE (amount=0) GROUP BY key0 LIMIT 1000000"
+          sql: "SELECT zipcodes.rowid, contributor_zipcode as key0, AVG(contributions_donotmodify.amount) as color FROM contributions_donotmodify, zipcodes WHERE (contributions_donotmodify.contributor_zipcode = zipcodes.ZCTA5CE10) AND (amount=0) GROUP BY zipcodes.rowid, key0 LIMIT 1000000"
         },
         scales: [{
           name: "polys_fillColor",
           type: "quantize",
           domain: [0, 100],
           range: ["black", "blue"],
-          nullValue: "#CACACA"
+          nullValue: "#D6D7D6",
+          default: "#D6D7D6"
         }],
         mark: {
           type: "polys",

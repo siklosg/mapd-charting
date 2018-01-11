@@ -6,9 +6,9 @@
 document.addEventListener("DOMContentLoaded", function init() {
   // A MapdCon instance is used for performing raw queries on a MapD GPU database.
   new MapdCon()
-    .protocol("https")
-    .host("metis.mapd.com")
-    .port("443")
+    .protocol("http")
+    .host("kali.mapd.com")
+    .port("9092")
     .dbName("mapd")
     .user("mapd")
     .password("HyperInteractive")
@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", function init() {
       }];
       // Table to use for the 2nd layer, which will be points
       // from a tweets table.
-      var tableName2 = 'tweets_nov_feb';
+      var tableName2 = 'tweets_2017_may';
 
       // Table to use for the 3nd layer, which will be points
       // from the contributions table.
@@ -77,7 +77,7 @@ document.addEventListener("DOMContentLoaded", function init() {
     // get the dimensions used for the first layer, the polygon layer
     // we need the rowid for polygon rendering, so the dimension will be based on
     // the rowid of the zipcodes
-    var polyDim1 = polycfLayer1.dimension("zipcodes.rowid");
+    var polyDim1 = polycfLayer1.dimension("contributor_zipcode");
 
     // we're going to color based on the average contribution of the zipcode,
     // so reduce the average from the join
@@ -97,6 +97,7 @@ document.addEventListener("DOMContentLoaded", function init() {
     // setup the first layer, the zipcode polygons
     var polyLayer1 = dc.rasterLayer("polys")
                         .crossfilter(polycfLayer1)
+                        .dimension(polyDim1)
                         .setState({
                           data: [
                             {

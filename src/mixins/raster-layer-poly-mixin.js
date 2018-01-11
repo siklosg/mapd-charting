@@ -74,20 +74,44 @@ export default function rasterLayerPolyMixin (_layer) {
     return state
   }
 
-  function getTransforms ({filter, globalFilter}) {
+  function getTransforms ({filter, globalFilter, layerFilter = []}) {
+
+    const groupby = {
+      type: "project",
+      expr: state.data[0].attr,
+      as: "key0"
+    }
+
     const transforms = [
+      {
+        type: "rowid",
+        table: state.data[1].table
+      },
+      {
+        type: "filter",
+        expr: `${state.data[0].table}.${state.data[0].attr} = ${state.data[1].table}.${state.data[1].attr}`
+      },
       {
         type: "aggregate",
         fields: [
-          parser.parseExpression(state.encoding.color.aggregrate)
+          layerFilter.length ? parser.parseExpression({
+            type: "case",
+            cond: [
+              [
+                {
+                  type: "in",
+                  expr: `${state.data[0].table}.${state.data[0].attr}`,
+                  set: layerFilter
+                },
+                parser.parseExpression(state.encoding.color.aggregrate)
+              ]
+            ],
+            else: null
+          }) : parser.parseExpression(state.encoding.color.aggregrate)
         ],
         ops: [null],
         as: ["color"],
-        groupby: {
-          type: "project",
-          expr: state.data[0].attr,
-          as: "key0"
-        }
+        groupby
       }
     ]
 
@@ -121,14 +145,11 @@ export default function rasterLayerPolyMixin (_layer) {
       data: {
         name: layerName,
         format: "polys",
-        shapeColGroup: "mapd",
         sql: parser.writeSQL({
           type: "root",
-          source: state.data[0].table, // .map(source => source.table).join(", "),
-          transform: getTransforms({filter, globalFilter})
-        }),
-        dbTableName: state.data[1].table,
-        polysKey: state.data[1].attr
+          source: state.data.map(source => source.table).join(", "),
+          transform: getTransforms({filter, globalFilter, layerFilter: _layer.filters()})
+        })
       },
       scales: [
         {
@@ -136,7 +157,8 @@ export default function rasterLayerPolyMixin (_layer) {
           type: "quantize",
           domain: state.encoding.color.domain,
           range: colorRange,
-          nullValue: "#CACACA"
+          nullValue: "#D6D7D6",
+          default: "#D6D7D6"
         }
       ],
       mark: {
@@ -158,7 +180,7 @@ export default function rasterLayerPolyMixin (_layer) {
             field: "color"
           },
           strokeColor: typeof state.mark === "object" ? state.mark.strokeColor : "white",
-          strokeWidth: typeof state.mark === "object" ? state.mark.strokeWidth : 0,
+          strokeWidth: typeof state.mark === "object" ? state.mark.strokeWidth : 0.5,
           lineJoin: typeof state.mark === "object" ? state.mark.lineJoin : "miter",
           miterLimit: typeof state.mark === "object" ? state.mark.miterLimit : 10
         }
@@ -174,7 +196,7 @@ export default function rasterLayerPolyMixin (_layer) {
   _layer._genVega = function (chart, layerName, group, query) {
     _vega = _layer.__genVega({
       layerName,
-      filter: _layer.crossfilter().getFilterString(),
+      filter: _layer.crossfilter().getFilterString(_layer.dimension().getDimensionIndex()),
       globalFilter: _layer.crossfilter().getGlobalFilterString()
     })
     return _vega
@@ -204,6 +226,25 @@ export default function rasterLayerPolyMixin (_layer) {
       return true
     }
     return false
+  }
+
+  let _filtersArray = []
+
+  _layer.filter = function (key) {
+    if (_filtersArray.includes(key)) {
+      _filtersArray = _filtersArray.filter(v => v !== key)
+    } else {
+      _filtersArray = [..._filtersArray, key]
+    }
+    _filtersArray.length ? _layer.dimension().filterMulti(_filtersArray) : _layer.dimension().filterAll()
+  }
+
+  _layer.filters = function (filters) {
+    if (!arguments.length) {
+      return _filtersArray
+    }
+
+    _filtersArray = filters
   }
 
   _layer._displayPopup = function (chart, parentElem, data, width, height, margins, xscale, yscale, minPopupArea, animate) {
@@ -342,6 +383,7 @@ export default function rasterLayerPolyMixin (_layer) {
                           .attr("width", width)
                           .attr("height", height)
 
+
     const xform = svg.append("g")
                        .attr("class", "map-poly-xform")
                        .attr("transform", "translate(" + (scale * bounds[0] - (scale - 1) * (bounds[0] + (boundsWidth / 2))) + ", " + (scale * (bounds[2] + 1) - (scale - 1) * (bounds[2] + 1 + (boundsHeight / 2))) + ")")
@@ -373,10 +415,16 @@ export default function rasterLayerPolyMixin (_layer) {
       for (let i = 0; i < pts.length; i = i + 2) {
         pointStr = pointStr + ((scale * (pts[i] - bounds[0])) + " " + (scale * (pts[i + 1] - bounds[2])) + ", ")
       }
-      pointStr = pointStr.slice(0, pointStr.length - 2)
+      pointStr = pointStr.slice(0, pointStr.length - 2).replace(/NaN/g, "")
 
       group.append("polygon")
                  .attr("points", pointStr)
+                 .attr("class", "map-polygon-shape")
+                 .on("click", () => {
+                   _layer.filter(data.key0)
+                   chart.hidePopup()
+                   chart.redrawGroup()
+                 })
     })
 
     _scaledPopups[chart] = isScaled
