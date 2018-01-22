@@ -13,9 +13,9 @@ document.addEventListener("DOMContentLoaded", function init() {
   }
 
   new MapdCon()
-    .protocol("http")
-    .host("kali.mapd.com")
-    .port("9092")
+    .protocol("https")
+    .host("metis.mapd.com")
+    .port("443")
     .dbName("mapd")
     .user("mapd")
     .password("HyperInteractive")

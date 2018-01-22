@@ -6,9 +6,9 @@
 document.addEventListener("DOMContentLoaded", function init() {
   // A MapdCon instance is used for performing raw queries on a MapD GPU database.
   new MapdCon()
-    .protocol("http")
-    .host("kali.mapd.com")
-    .port("9092")
+    .protocol("https")
+    .host("metis.mapd.com")
+    .port("443")
     .dbName("mapd")
     .user("mapd")
     .password("HyperInteractive")
@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", function init() {
       }];
       // Table to use for the 2nd layer, which will be points
       // from a tweets table.
-      var tableName2 = 'tweets_2017_may';
+      var tableName2 = 'tweets_nov_feb';
 
       // Table to use for the 3nd layer, which will be points
       // from the contributions table.
@@ -206,6 +206,11 @@ document.addEventListener("DOMContentLoaded", function init() {
                               domain: langDomain,
                               range: langColors
                             }
+                          },
+                          config: {
+                            point: {
+                              shape: "circle"
+                            }
                           }
                         })                                                   // of a tweet is not found in the domain fo the scale
                         .popupColumns(['tweet_text', 'sender_name', 'tweet_time', 'lang', 'origin', 'followers'])
@@ -269,6 +274,11 @@ document.addEventListener("DOMContentLoaded", function init() {
                               field: "recipient_party",
                               domain: ["D", "R"],
                               range: ["blue", "red"]
+                            }
+                          },
+                          config: {
+                            point: {
+                              shape: "circle"
                             }
                           }
                         })
