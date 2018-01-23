@@ -1,4 +1,5 @@
 import {adjustOpacity, createRasterLayerGetterSetter, createVegaAttrMixin} from "../utils/utils-vega"
+import {events} from "../core/events"
 import {parser} from "../utils/utils"
 
 const vegaLineJoinOptions = ["miter", "round", "bevel"]
@@ -39,6 +40,7 @@ function validateMiterLimit (newMiterLimit, currMiterLimit) {
 
 export default function rasterLayerPolyMixin (_layer) {
   _layer.crossfilter = createRasterLayerGetterSetter(_layer, null)
+  _layer.filtersInverse = createRasterLayerGetterSetter(_layer, false)
 
   createVegaAttrMixin(_layer, "lineJoin", vegaLineJoinOptions[0], vegaLineJoinOptions[0], false, {
     preDefault: validateLineJoin,
@@ -74,7 +76,7 @@ export default function rasterLayerPolyMixin (_layer) {
     return state
   }
 
-  function getTransforms ({filter, globalFilter, layerFilter = []}) {
+  function getTransforms ({filter, globalFilter, layerFilter = [], filtersInverse}) {
 
     const groupby = {
       type: "project",
@@ -99,7 +101,7 @@ export default function rasterLayerPolyMixin (_layer) {
             cond: [
               [
                 {
-                  type: "in",
+                  type: filtersInverse ? "not in" : "in",
                   expr: `${state.data[0].table}.${state.data[0].attr}`,
                   set: layerFilter
                 },
@@ -139,7 +141,7 @@ export default function rasterLayerPolyMixin (_layer) {
     return transforms
   }
 
-  _layer.__genVega = function ({filter, globalFilter, layerName}) {
+  _layer.__genVega = function ({filter, globalFilter, layerFilter, filtersInverse, layerName}) {
     const colorRange = state.encoding.color.range.map(c => adjustOpacity(c, state.encoding.color.opacity))
     return {
       data: {
@@ -148,7 +150,7 @@ export default function rasterLayerPolyMixin (_layer) {
         sql: parser.writeSQL({
           type: "root",
           source: state.data.map(source => source.table).join(", "),
-          transform: getTransforms({filter, globalFilter, layerFilter: _layer.filters()})
+          transform: getTransforms({filter, globalFilter, layerFilter, filtersInverse})
         })
       },
       scales: [
@@ -197,7 +199,9 @@ export default function rasterLayerPolyMixin (_layer) {
     _vega = _layer.__genVega({
       layerName,
       filter: _layer.crossfilter().getFilterString(_layer.dimension().getDimensionIndex()),
-      globalFilter: _layer.crossfilter().getGlobalFilterString()
+      globalFilter: _layer.crossfilter().getGlobalFilterString(),
+      layerFilter: _layer.filters(),
+      filtersInverse: _layer.filtersInverse()
     })
     return _vega
   }
@@ -229,22 +233,27 @@ export default function rasterLayerPolyMixin (_layer) {
   }
 
   let _filtersArray = []
+  let _isInverseFilter = false
 
-  _layer.filter = function (key) {
+  _layer.filter = function (key, isInverseFilter) {
+    if (isInverseFilter !== _layer.filtersInverse()) {
+      _layer.filterAll()
+      _layer.filtersInverse(isInverseFilter)
+    }
     if (_filtersArray.includes(key)) {
       _filtersArray = _filtersArray.filter(v => v !== key)
     } else {
       _filtersArray = [..._filtersArray, key]
     }
-    _filtersArray.length ? _layer.dimension().filterMulti(_filtersArray) : _layer.dimension().filterAll()
+    _filtersArray.length ? _layer.dimension().filterMulti(_filtersArray, undefined, isInverseFilter) : _layer.dimension().filterAll()
   }
 
-  _layer.filters = function (filters) {
-    if (!arguments.length) {
-      return _filtersArray
-    }
+  _layer.filters = function () {
+    return _filtersArray
+  }
 
-    _filtersArray = filters
+  _layer.filterAll = function () {
+    _filtersArray = []
   }
 
   _layer._displayPopup = function (chart, parentElem, data, width, height, margins, xscale, yscale, minPopupArea, animate) {
@@ -420,11 +429,7 @@ export default function rasterLayerPolyMixin (_layer) {
       group.append("polygon")
                  .attr("points", pointStr)
                  .attr("class", "map-polygon-shape")
-                 .on("click", () => {
-                   _layer.filter(data.key0)
-                   chart.hidePopup()
-                   chart.redrawGroup()
-                 })
+                 .on("click", () => _layer.onClick(chart, data))
     })
 
     _scaledPopups[chart] = isScaled
@@ -435,6 +440,17 @@ export default function rasterLayerPolyMixin (_layer) {
       rndrPropSet: queryRndrProps,
       bounds
     }
+  }
+
+  _layer.onClick = function (chart, data) {
+    const isInverseFilter = d3.event.metaKey || d3.event.ctrlKey
+    chart.hidePopup()
+
+    events.trigger(() => {
+      _layer.filter(data.key0, isInverseFilter)
+      chart.filter(data.key0, isInverseFilter)
+      chart.redrawGroup()
+    })
   }
 
   _layer._hidePopup = function (chart, hideCallback) {
