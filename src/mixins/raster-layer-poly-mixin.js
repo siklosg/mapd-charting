@@ -80,18 +80,18 @@ export default function rasterLayerPolyMixin (_layer) {
 
     const groupby = {
       type: "project",
-      expr: state.data[0].attr,
+      expr: `t0.${state.data[0].attr}`,
       as: "key0"
     }
 
     const transforms = [
       {
         type: "rowid",
-        table: state.data[1].table
+        table: "t1"
       },
       {
         type: "filter",
-        expr: `${state.data[0].table}.${state.data[0].attr} = ${state.data[1].table}.${state.data[1].attr}`
+        expr: `t0.${state.data[0].attr} = t1.${state.data[1].attr}`
       },
       {
         type: "aggregate",
@@ -102,7 +102,7 @@ export default function rasterLayerPolyMixin (_layer) {
               [
                 {
                   type: filtersInverse ? "not in" : "in",
-                  expr: `${state.data[0].table}.${state.data[0].attr}`,
+                  expr: `t0.${state.data[0].attr}`,
                   set: layerFilter
                 },
                 parser.parseExpression(state.encoding.color.aggregrate)
@@ -149,7 +149,7 @@ export default function rasterLayerPolyMixin (_layer) {
         format: "polys",
         sql: parser.writeSQL({
           type: "root",
-          source: state.data.map(source => source.table).join(", "),
+          source: state.data.map((source, index) => `${source.table} as t${index}`).join(", "),
           transform: getTransforms({filter, globalFilter, layerFilter, filtersInverse})
         })
       },
