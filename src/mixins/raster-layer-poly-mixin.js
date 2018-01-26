@@ -78,21 +78,23 @@ export default function rasterLayerPolyMixin (_layer) {
 
   function getTransforms ({filter, globalFilter, layerFilter = [], filtersInverse}) {
 
+    const selfJoin = state.data[0].table === state.data[1].table
+
     const groupby = {
       type: "project",
-      expr: `t0.${state.data[0].attr}`,
+      expr: `${state.data[0].table}.${state.data[0].attr}`,
       as: "key0"
     }
 
     const transforms = [
       {
         type: "rowid",
-        table: "t1"
+        table: state.data[1].table
       },
-      {
+      (!selfJoin && {
         type: "filter",
-        expr: `t0.${state.data[0].attr} = t1.${state.data[1].attr}`
-      },
+        expr: `${state.data[0].table}.${state.data[0].attr} = ${state.data[1].table}.${state.data[1].attr}`
+      }),
       {
         type: "aggregate",
         fields: [
@@ -102,7 +104,7 @@ export default function rasterLayerPolyMixin (_layer) {
               [
                 {
                   type: filtersInverse ? "not in" : "in",
-                  expr: `t0.${state.data[0].attr}`,
+                  expr: `${state.data[0].table}.${state.data[0].attr}`,
                   set: layerFilter
                 },
                 parser.parseExpression(state.encoding.color.aggregrate)
@@ -149,7 +151,7 @@ export default function rasterLayerPolyMixin (_layer) {
         format: "polys",
         sql: parser.writeSQL({
           type: "root",
-          source: state.data.map((source, index) => `${source.table} as t${index}`).join(", "),
+          source: [...new Set(state.data.map((source, index) => source.table))].join(", "),
           transform: getTransforms({filter, globalFilter, layerFilter, filtersInverse})
         })
       },
@@ -198,7 +200,7 @@ export default function rasterLayerPolyMixin (_layer) {
   _layer._genVega = function (chart, layerName, group, query) {
     _vega = _layer.__genVega({
       layerName,
-      filter: _layer.crossfilter().getFilterString(_layer.dimension().getDimensionIndex()),
+      filter: _layer.crossfilter().getFilterString(_layer.dimension().getDimensionIndex(), ),
       globalFilter: _layer.crossfilter().getGlobalFilterString(),
       layerFilter: _layer.filters(),
       filtersInverse: _layer.filtersInverse()
