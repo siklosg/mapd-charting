@@ -200,7 +200,7 @@ export default function rasterLayerPolyMixin (_layer) {
   _layer._genVega = function (chart, layerName, group, query) {
     _vega = _layer.__genVega({
       layerName,
-      filter: _layer.crossfilter().getFilterString(_layer.dimension().getDimensionIndex(), ),
+      filter: _layer.crossfilter().getFilterString(_layer.dimension().getDimensionIndex()),
       globalFilter: _layer.crossfilter().getGlobalFilterString(),
       layerFilter: _layer.filters(),
       filtersInverse: _layer.filtersInverse()
@@ -235,7 +235,7 @@ export default function rasterLayerPolyMixin (_layer) {
   }
 
   let _filtersArray = []
-  let _isInverseFilter = false
+  const _isInverseFilter = false
 
   _layer.filter = function (key, isInverseFilter) {
     if (isInverseFilter !== _layer.filtersInverse()) {
@@ -431,7 +431,7 @@ export default function rasterLayerPolyMixin (_layer) {
       group.append("polygon")
                  .attr("points", pointStr)
                  .attr("class", "map-polygon-shape")
-                 .on("click", () => _layer.onClick(chart, data))
+                 .on("click", () => _layer.onClick(chart, data, d3.event))
     })
 
     _scaledPopups[chart] = isScaled
@@ -444,10 +444,9 @@ export default function rasterLayerPolyMixin (_layer) {
     }
   }
 
-  _layer.onClick = function (chart, data) {
-    const isInverseFilter = d3.event.metaKey || d3.event.ctrlKey
+  _layer.onClick = function (chart, data, event) {
+    const isInverseFilter = Boolean(event && (event.metaKey || event.ctrlKey))
     chart.hidePopup()
-
     events.trigger(() => {
       _layer.filter(data.key0, isInverseFilter)
       chart.filter(data.key0, isInverseFilter)
