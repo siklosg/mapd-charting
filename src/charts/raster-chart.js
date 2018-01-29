@@ -429,10 +429,13 @@ export default function rasterChart (parent, useMap, chartGroup, _mapboxgl) {
           Boolean(redraw)
         )
         _hasBeenRendered = true
-
       } else {
         _chart._setOverlay(null, null, null, browser, Boolean(redraw))
       }
+    } else {
+      _chart.map().once("style.load", () => {
+        _chart._doRender(data, redraw, doNotForceData)
+      })
     }
   }
 

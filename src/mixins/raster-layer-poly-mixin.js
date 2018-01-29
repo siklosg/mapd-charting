@@ -445,6 +445,7 @@ export default function rasterLayerPolyMixin (_layer) {
   }
 
   _layer.onClick = function (chart, data, event) {
+    if (!data) { return }
     const isInverseFilter = Boolean(event && (event.metaKey || event.ctrlKey))
     chart.hidePopup()
     events.trigger(() => {
