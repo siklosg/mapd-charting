@@ -526,7 +526,7 @@ export default function mapMixin (_chart, chartDivId, _mapboxgl, mixinDraw = tru
           _chart.getLayerNames().forEach(layerName => {
             const layer = _chart.getLayer(layerName)
             if (typeof layer.onClick === "function") {
-              layer.onClick(_chart, data, event)
+              layer.onClick(_chart, data, event.originalEvent)
             }
           })
         })

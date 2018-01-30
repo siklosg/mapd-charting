@@ -236,6 +236,9 @@ export default function rasterLayerPolyMixin (_layer) {
 
   let _filtersArray = []
   const _isInverseFilter = false
+  const polyLayerEvents = ["filtered"]
+  const _listeners = d3.dispatch.apply(d3, polyLayerEvents)
+
 
   _layer.filter = function (key, isInverseFilter) {
     if (isInverseFilter !== _layer.filtersInverse()) {
@@ -256,6 +259,11 @@ export default function rasterLayerPolyMixin (_layer) {
 
   _layer.filterAll = function () {
     _filtersArray = []
+  }
+
+  _layer.on = function (event, listener) {
+    _listeners.on(event, listener)
+    return _layer
   }
 
   _layer._displayPopup = function (chart, parentElem, data, width, height, margins, xscale, yscale, minPopupArea, animate) {
@@ -447,10 +455,12 @@ export default function rasterLayerPolyMixin (_layer) {
   _layer.onClick = function (chart, data, event) {
     if (!data) { return }
     const isInverseFilter = Boolean(event && (event.metaKey || event.ctrlKey))
+
     chart.hidePopup()
     events.trigger(() => {
       _layer.filter(data.key0, isInverseFilter)
       chart.filter(data.key0, isInverseFilter)
+      _listeners.filtered(_layer, _filtersArray)
       chart.redrawGroup()
     })
   }
@@ -477,6 +487,7 @@ export default function rasterLayerPolyMixin (_layer) {
   }
 
   _layer._destroyLayer = function (chart) {
+    _layer.on("filtered", null)
     // deleteCanvas(chart)
   }
 
