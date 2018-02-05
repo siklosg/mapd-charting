@@ -1,4 +1,5 @@
 import {adjustOpacity, createRasterLayerGetterSetter, createVegaAttrMixin} from "../utils/utils-vega"
+import d3 from "d3"
 import {events} from "../core/events"
 import {parser} from "../utils/utils"
 
